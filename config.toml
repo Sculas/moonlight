@@ -1,0 +1,6 @@
+
+[Server]
+  Multicore = true
+  Port = 25565
+  ReuseAddr = false
+  ReusePort = false
