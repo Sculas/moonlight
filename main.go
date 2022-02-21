@@ -15,7 +15,8 @@ func main() {
 
 	log := logrus.New()
 	log.SetFormatter(&nested.Formatter{
-		HideKeys: true,
+		HideKeys:      true,
+		ShowFullLevel: true,
 	})
 	log.Level = logrus.DebugLevel
 
