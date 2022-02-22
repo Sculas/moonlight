@@ -78,7 +78,10 @@ func (p *ChannelPipeline) Fire(c gnet.Conn) gnet.Action {
 	if err != nil {
 		return gnet.Close // just give up
 	}
+
 	buf := serde.With(b)
+	defer serde.Put(buf) // whatever may happen, always release the buffer
+
 	for el := p.pipe.Front(); el != nil; el = el.Next() { // loop through all handlers
 		eh := el.Value.(*handler)
 		action, err := p.invokeHandler(eh, p.c, buf) // invoke the handler
