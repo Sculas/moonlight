@@ -4,6 +4,7 @@ import (
 	"github.com/panjf2000/gnet/v2"
 	"github.com/sculas/moonlight/global"
 	"github.com/sculas/moonlight/network/serde"
+	"github.com/sculas/moonlight/server/client/state"
 	"github.com/sculas/moonlight/util"
 	"github.com/sirupsen/logrus"
 )
@@ -20,6 +21,9 @@ type Client struct {
 
 	// logger
 	log *logrus.Entry
+
+	// client state
+	state state.ClientState
 }
 
 func NewClient(c gnet.Conn) *Client {
