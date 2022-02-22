@@ -25,9 +25,9 @@ func main() {
 	global.ServerLogger = global.Logger.WithField(util.Component("server"))
 	global.ClientLogger = global.Logger.WithField(util.Component("client"))
 
-	global.Server = server.New()
+	server.Server = server.New()
 	log.Fatal(gnet.Run(
-		global.Server,
+		server.Server,
 		fmt.Sprintf("tcp://:%d", config.Config.Server.Port),
 		gnet.WithOptions(gnet.Options{
 			Logger: global.Logger.WithField(util.Component("gnet")),

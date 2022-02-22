@@ -4,6 +4,7 @@ import (
 	"github.com/panjf2000/gnet/v2"
 	"github.com/sculas/moonlight/global"
 	"github.com/sculas/moonlight/network/serde"
+	"github.com/sculas/moonlight/util"
 	"github.com/sirupsen/logrus"
 )
 
@@ -37,13 +38,15 @@ func NewClient(c gnet.Conn) *Client {
 func (c *Client) StartReceiving() {
 	for {
 		frame, have := <-c.Receiver
-		if !have {
+		if !have || util.InvalidFrame(frame) {
 			break
 		}
-		// TODO: maybe we should move this somewhere else?
 
 		c.log.Debugf("got traffic in our goroutine: %s", string(frame))
 	}
+
+	c.log.Debug("packet handler goroutine stopped")
+	c.Close()
 }
 
 func (c *Client) StopReceiving() {
@@ -58,5 +61,9 @@ func (c *Client) ResetBuffers() {
 func (c *Client) Cleanup() {
 	c.StopReceiving()
 	c.ResetBuffers()
+	c.Close()
+}
+
+func (c *Client) Close() {
 	_ = c.c.Close(nil)
 }

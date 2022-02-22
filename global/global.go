@@ -2,7 +2,6 @@
 package global
 
 import (
-	"github.com/sculas/moonlight/server"
 	"github.com/sirupsen/logrus"
 )
 
@@ -12,6 +11,4 @@ var (
 
 	ServerLogger *logrus.Entry
 	ClientLogger *logrus.Entry
-
-	Server *server.Server
 )
