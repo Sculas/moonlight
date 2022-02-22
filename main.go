@@ -5,27 +5,32 @@ import (
 	nested "github.com/antonfisher/nested-logrus-formatter"
 	"github.com/panjf2000/gnet/v2"
 	"github.com/sculas/moonlight/config"
+	"github.com/sculas/moonlight/global"
 	"github.com/sculas/moonlight/server"
 	"github.com/sculas/moonlight/util"
 	"github.com/sirupsen/logrus"
+	"log"
 )
 
 func main() {
 	config.Initialize()
 
-	log := logrus.New()
-	log.SetFormatter(&nested.Formatter{
+	global.Logger = logrus.New()
+	global.Logger.SetFormatter(&nested.Formatter{
 		HideKeys:      true,
 		ShowFullLevel: true,
 	})
-	log.Level = logrus.DebugLevel
+	global.Logger.Level = logrus.DebugLevel
 
-	srv := server.New(log.WithField(util.Component("server")))
+	global.ServerLogger = global.Logger.WithField(util.Component("server"))
+	global.ClientLogger = global.Logger.WithField(util.Component("client"))
+
+	global.Server = server.New()
 	log.Fatal(gnet.Run(
-		srv,
+		global.Server,
 		fmt.Sprintf("tcp://:%d", config.Config.Server.Port),
 		gnet.WithOptions(gnet.Options{
-			Logger: log.WithField(util.Component("gnet")),
+			Logger: global.Logger.WithField(util.Component("gnet")),
 
 			Multicore: config.Config.Server.Multicore,
 			ReuseAddr: config.Config.Server.ReuseAddr,

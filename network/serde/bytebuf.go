@@ -13,6 +13,12 @@ type ByteBuf struct {
 	i int // reader index
 }
 
+func NewByteBuf() *ByteBuf {
+	return &ByteBuf{
+		B: make([]byte, 0), // TODO: default size
+	}
+}
+
 func (b *ByteBuf) Len() int {
 	return len(b.B)
 }
@@ -134,7 +140,7 @@ const (
 	varTermByte = 0x80
 )
 
-func (b *ByteBuf) ReadVarInt() (r int32, err error) {
+func (b *ByteBuf) ReadVarInt() (r int, err error) {
 	if !b.Readable() {
 		return 0, io.EOF
 	}
@@ -145,7 +151,7 @@ func (b *ByteBuf) ReadVarInt() (r int32, err error) {
 			return 0, err
 		}
 		n++
-		r |= (c & maxByte) << n * 7
+		r |= (int(c) & maxByte) << n * 7
 		if n > maxVarInt {
 			return 0, ErrVarInt
 		}
@@ -156,18 +162,18 @@ func (b *ByteBuf) ReadVarInt() (r int32, err error) {
 	return
 }
 
-func (b *ByteBuf) ReadVarLong() (r int64, err error) {
+func (b *ByteBuf) ReadVarLong() (r int, err error) {
 	if !b.Readable() {
 		return 0, io.EOF
 	}
-	c, n := byte(0), int64(0)
+	c, n := byte(0), 0
 	for {
 		c, err = b.ReadByte()
 		if err != nil {
 			return 0, err
 		}
 		n++
-		r |= (c & maxByte) << n * 7
+		r |= (int(c) & maxByte) << n * 7
 		if n > maxVarLong {
 			return 0, ErrVarLong
 		}
