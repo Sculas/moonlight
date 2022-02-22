@@ -15,8 +15,8 @@ const (
 type baseHandler interface {
 	// Exception gets invoked when an exception occurs in the pipeline.
 	// If the exception was properly handled, return nil.
-	// Otherwise, return the error.
-	// You may propagate the error to the next handler in the pipeline by returning the error parameter.
+	// You may propagate the error to the next handler in the pipeline by returning the error or any non-nil error value.
+	// If you try to handle the error but fail to do so, return your own error.
 	Exception(c *client.Client, err error) (error, gnet.Action)
 }
 
