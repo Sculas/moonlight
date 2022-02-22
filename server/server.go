@@ -7,6 +7,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// TODO:
+//  Need to decide on whether we should do this:
+//    it would also be good if every connection has a buffer of their own, so we don't have to get one from the pool for every packet
+
 type server struct {
 	*gnet.BuiltinEventEngine
 
@@ -35,10 +39,6 @@ func (s *server) OnShutdown(gnet.Engine) {
 func (s *server) OnOpen(conn gnet.Conn) (out []byte, action gnet.Action) {
 	s.log.Debugf("new connection from %s", conn.RemoteAddr())
 
-	// FIXME:
-	//  let's implement something like Netty's MessageToByte and ByteToMessage (en/de)coders.
-	//  it would also be good if every connection has a buffer of their own, so we don't have to get one from the pool for every packet
-
 	c := client.NewClient(&conn) // FIXME: are we allowed to hold a reference of the conn?
 	conn.SetContext(c)
 
@@ -54,8 +54,8 @@ func (s *server) OnClose(c gnet.Conn, err error) (action gnet.Action) {
 
 // OnTraffic fires when a local socket receives data from the peer.
 func (s *server) OnTraffic(conn gnet.Conn) gnet.Action {
-	client := conn.Context().(*client.Client)
-	client.Receive(conn)
+	c := conn.Context().(*client.Client)
+	c.Receive(conn)
 
 	return gnet.None
 }
