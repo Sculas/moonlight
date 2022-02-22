@@ -2,10 +2,19 @@ package pipeline
 
 import (
 	"container/list"
+	"fmt"
 	"github.com/panjf2000/gnet/v2"
 )
 
-type baseHandler interface{}
+const (
+	ErrEOP = "pipeline: an exception occurred in the pipeline, but was not handled by any of the handlers"
+)
+
+type baseHandler interface {
+	// Exception gets invoked when an exception occurs in the pipeline.
+	// If the exception was properly handled, return true, otherwise return false.
+	Exception(c gnet.Conn, err error) (bool, gnet.Action)
+}
 
 type InboundHandler interface {
 	baseHandler
@@ -58,12 +67,31 @@ func (p *ChannelPipeline) AddAfter(name string, handler baseHandler) {
 	})
 }
 
-func (p *ChannelPipeline) Read(c gnet.Conn) gnet.Action {
-	for el := p.pipe.Front(); el != nil; el = el.Next() {
+func (p *ChannelPipeline) Fire(c gnet.Conn) gnet.Action {
+	for el := p.pipe.Front(); el != nil; el = el.Next() { // loop through all handlers
 		eh := el.Value.(*handler)
-		if h, ok := eh.h.(InboundHandler); ok {
-			if action := h.Read(c); action != gnet.None {
-				return action
+		action, err := p.invokeHandler(eh, c) // invoke the handler
+		if action == gnet.Close {
+			return action // we're being told to close, no reason to continue
+		}
+		if err != nil { // an exception occurred
+			// propagate exception down the pipeline from the next handler
+			handled := false
+			for cel := el.Next(); cel != nil; cel = cel.Next() {
+				ceh := cel.Value.(*handler)
+				handled, action = ceh.h.Exception(c, err)
+				if handled {
+					// handled successfully, stop propagating
+					if action == gnet.Close {
+						return action
+					}
+					break
+				}
+			}
+			if !handled {
+				// no handler handled the exception, so we have to close the connection
+				fmt.Println(ErrEOP) // TODO
+				return gnet.Close
 			}
 		}
 	}
@@ -76,4 +104,24 @@ func (p *ChannelPipeline) findInvoke(name string, f func(e *list.Element)) {
 			f(el)
 		}
 	}
+}
+
+func (ChannelPipeline) invokeHandler(h *handler, c gnet.Conn) (action gnet.Action, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			if e, ok := r.(error); ok {
+				err = e
+			} else {
+				err = fmt.Errorf("%v", r)
+			}
+		}
+	}()
+
+	switch h.h.(type) {
+	case InboundHandler:
+		action = h.h.(InboundHandler).Read(c)
+	case OutboundHandler:
+		h.h.(OutboundHandler).Write()
+	}
+	return
 }
