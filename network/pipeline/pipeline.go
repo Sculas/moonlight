@@ -4,6 +4,8 @@ import (
 	"container/list"
 	"fmt"
 	"github.com/panjf2000/gnet/v2"
+	"github.com/sculas/moonlight/network/serde"
+	"github.com/sculas/moonlight/server/client"
 )
 
 const (
@@ -12,13 +14,15 @@ const (
 
 type baseHandler interface {
 	// Exception gets invoked when an exception occurs in the pipeline.
-	// If the exception was properly handled, return true, otherwise return false.
-	Exception(c gnet.Conn, err error) (bool, gnet.Action)
+	// If the exception was properly handled, return nil.
+	// Otherwise, return the error.
+	// You may propagate the error to the next handler in the pipeline by returning the error parameter.
+	Exception(c *client.Client, err error) (error, gnet.Action)
 }
 
 type InboundHandler interface {
 	baseHandler
-	Read(c gnet.Conn) (action gnet.Action) // TODO
+	Read(c *client.Client, buf *serde.ByteBuf) (action gnet.Action) // TODO
 }
 
 type OutboundHandler interface {
@@ -33,11 +37,13 @@ type handler struct {
 
 type ChannelPipeline struct {
 	pipe *list.List
+	c    *client.Client
 }
 
-func New() *ChannelPipeline {
+func New(c *client.Client) *ChannelPipeline {
 	return &ChannelPipeline{
 		pipe: list.New(),
+		c:    c,
 	}
 }
 
@@ -68,9 +74,14 @@ func (p *ChannelPipeline) AddAfter(name string, handler baseHandler) {
 }
 
 func (p *ChannelPipeline) Fire(c gnet.Conn) gnet.Action {
+	b, err := c.Next(-1)
+	if err != nil {
+		return gnet.Close // just give up
+	}
+	buf := serde.With(b)
 	for el := p.pipe.Front(); el != nil; el = el.Next() { // loop through all handlers
 		eh := el.Value.(*handler)
-		action, err := p.invokeHandler(eh, c) // invoke the handler
+		action, err := p.invokeHandler(eh, p.c, buf) // invoke the handler
 		if action == gnet.Close {
 			return action // we're being told to close, no reason to continue
 		}
@@ -79,12 +90,13 @@ func (p *ChannelPipeline) Fire(c gnet.Conn) gnet.Action {
 			handled := false
 			for cel := el.Next(); cel != nil; cel = cel.Next() {
 				ceh := cel.Value.(*handler)
-				handled, action = ceh.h.Exception(c, err)
-				if handled {
+				err, action = ceh.h.Exception(p.c, err)
+				if err == nil {
 					// handled successfully, stop propagating
 					if action == gnet.Close {
 						return action
 					}
+					handled = true
 					break
 				}
 			}
@@ -106,7 +118,7 @@ func (p *ChannelPipeline) findInvoke(name string, f func(e *list.Element)) {
 	}
 }
 
-func (ChannelPipeline) invokeHandler(h *handler, c gnet.Conn) (action gnet.Action, err error) {
+func (ChannelPipeline) invokeHandler(h *handler, c *client.Client, buf *serde.ByteBuf) (action gnet.Action, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			if e, ok := r.(error); ok {
@@ -119,7 +131,7 @@ func (ChannelPipeline) invokeHandler(h *handler, c gnet.Conn) (action gnet.Actio
 
 	switch h.h.(type) {
 	case InboundHandler:
-		action = h.h.(InboundHandler).Read(c)
+		action = h.h.(InboundHandler).Read(c, buf)
 	case OutboundHandler:
 		h.h.(OutboundHandler).Write()
 	}
