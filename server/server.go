@@ -3,6 +3,7 @@ package server
 import (
 	"github.com/panjf2000/gnet/v2"
 	"github.com/sculas/moonlight/config"
+	"github.com/sculas/moonlight/server/client"
 	"github.com/sirupsen/logrus"
 )
 
@@ -34,21 +35,12 @@ func (s *server) OnShutdown(gnet.Engine) {
 func (s *server) OnOpen(c gnet.Conn) (out []byte, action gnet.Action) {
 	s.log.Debugf("new connection from %s", c.RemoteAddr())
 
-	// FIXME: this is temporary
-	//  oh my, we should also give the handler a byte buffer instead of them getting one themselves
+	// FIXME:
 	//  let's implement something like Netty's MessageToByte and ByteToMessage (en/de)coders.
-	//  also instead of giving them gnet.Conn, give them something else that doesn't allow them to take the buffer
 	//  it would also be good if every connection has a buffer of their own, so we don't have to get one from the pool for every packet
-	//pipe := pipeline.New()
-	//pipe.AddLast("testing", &pipeline.Handler{
-	//	Func: func(c gnet.Conn) (action gnet.Action) {
-	//		buf, _ := c.Next(-1)
-	//		s.log.Debugf("recv %d bytes\n", len(buf))
-	//		c.Write(buf)
-	//		return
-	//	},
-	//})
-	//c.SetContext(pipe)
+
+	cc := client.NewClient(&c) // FIXME: are we allowed to hold a reference of the conn?
+	c.SetContext(cc)
 
 	return
 }
