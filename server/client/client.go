@@ -15,3 +15,7 @@ func NewClient(c *gnet.Conn) *Client {
 	client.pipeline = pipeline.New(client)
 	return client
 }
+
+func (c *Client) Receive(conn gnet.Conn) {
+	c.pipeline.Fire(conn)
+}

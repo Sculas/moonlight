@@ -32,15 +32,15 @@ func (s *server) OnShutdown(gnet.Engine) {
 
 // OnOpen fires when a new connection has been opened.
 // The parameter out is the return value which is going to be sent back to the peer.
-func (s *server) OnOpen(c gnet.Conn) (out []byte, action gnet.Action) {
-	s.log.Debugf("new connection from %s", c.RemoteAddr())
+func (s *server) OnOpen(conn gnet.Conn) (out []byte, action gnet.Action) {
+	s.log.Debugf("new connection from %s", conn.RemoteAddr())
 
 	// FIXME:
 	//  let's implement something like Netty's MessageToByte and ByteToMessage (en/de)coders.
 	//  it would also be good if every connection has a buffer of their own, so we don't have to get one from the pool for every packet
 
-	cc := client.NewClient(&c) // FIXME: are we allowed to hold a reference of the conn?
-	c.SetContext(cc)
+	c := client.NewClient(&conn) // FIXME: are we allowed to hold a reference of the conn?
+	conn.SetContext(c)
 
 	return
 }
@@ -53,7 +53,9 @@ func (s *server) OnClose(c gnet.Conn, err error) (action gnet.Action) {
 }
 
 // OnTraffic fires when a local socket receives data from the peer.
-func (s *server) OnTraffic(c gnet.Conn) gnet.Action {
-	//c.Context().(*pipeline.ChannelPipeline).Fire(c)
+func (s *server) OnTraffic(conn gnet.Conn) gnet.Action {
+	client := conn.Context().(*client.Client)
+	client.Receive(conn)
+
 	return gnet.None
 }
