@@ -34,6 +34,7 @@ func (b *ByteBuf) Write(p []byte) {
 
 func (b *ByteBuf) Reset() {
 	b.B = b.B[:0]
+	b.i = 0
 }
 
 func (b *ByteBuf) got(i int) bool {
