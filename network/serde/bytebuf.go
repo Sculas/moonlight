@@ -27,6 +27,11 @@ func (b *ByteBuf) Bytes() []byte {
 	return b.B
 }
 
+func (b *ByteBuf) Write(p []byte) {
+	b.B = p
+	b.i = 0
+}
+
 func (b *ByteBuf) Reset() {
 	b.B = b.B[:0]
 }
@@ -37,6 +42,10 @@ func (b *ByteBuf) got(i int) bool {
 
 func (b *ByteBuf) seek(i int) int {
 	b.i += i
+	return b.i
+}
+
+func (b *ByteBuf) SeekIndex() int {
 	return b.i
 }
 
@@ -82,6 +91,15 @@ func (b *ByteBuf) ReadBytes(i int) ([]byte, error) {
 	}
 	c := b.B[b.i : b.i+i]
 	b.seek(i)
+	return c, nil
+}
+
+func (b *ByteBuf) ReadAllBytes() ([]byte, error) {
+	if !b.Readable() {
+		return nil, io.EOF
+	}
+	c := b.B[b.i:]
+	b.seek(b.Len())
 	return c, nil
 }
 
@@ -162,9 +180,9 @@ func (b *ByteBuf) ReadVarInt() (r int, err error) {
 			return 0, ErrInvalidVarInt
 		}
 		if c&varTermByte == 0 {
-			if n == 1 { // the first byte should never be the terminator
-				return 0, ErrInvalidVarInt
-			}
+			//if n == 1 { // the first byte should never be the terminator
+			//	return 0, ErrInvalidVarInt
+			//}
 			break
 		}
 	}
@@ -193,9 +211,9 @@ func (b *ByteBuf) ReadVarLong() (r int, err error) {
 			return 0, ErrInvalidVarLong
 		}
 		if c&varTermByte == 0 {
-			if n == 1 { // the first byte should never be the terminator
-				return 0, ErrInvalidVarLong
-			}
+			//if n == 1 { // the first byte should never be the terminator
+			//	return 0, ErrInvalidVarLong
+			//}
 			break
 		}
 	}

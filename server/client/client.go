@@ -5,7 +5,6 @@ import (
 	"github.com/sculas/moonlight/global"
 	"github.com/sculas/moonlight/network/serde"
 	"github.com/sculas/moonlight/server/client/state"
-	"github.com/sculas/moonlight/util"
 	"github.com/sirupsen/logrus"
 )
 
@@ -36,36 +35,4 @@ func NewClient(c gnet.Conn) *Client {
 
 		log: global.ClientLogger.WithField("addr", c.RemoteAddr().String()), // TODO
 	}
-}
-
-func (c *Client) StartReceiving() {
-	for {
-		frame, have := <-c.Receiver
-		if !have || util.InvalidFrame(frame) {
-			break
-		}
-
-		c.log.Debug("got traffic in our goroutine")
-	}
-
-	c.log.Debug("packet handler goroutine stopped")
-	c.Close()
-}
-
-func (c *Client) StopReceiving() {
-	close(c.Receiver)
-}
-
-func (c *Client) ResetBuffers() {
-	c.rb.Reset()
-}
-
-func (c *Client) Cleanup() {
-	c.StopReceiving()
-	c.ResetBuffers()
-	c.Close()
-}
-
-func (c *Client) Close() {
-	_ = c.c.Close(nil)
 }
