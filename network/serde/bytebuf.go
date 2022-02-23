@@ -2,7 +2,6 @@ package serde
 
 import (
 	"encoding/binary"
-	"io"
 	"math"
 )
 
@@ -52,7 +51,7 @@ func (b *ByteBuf) SeekIndex() int {
 
 func (b *ByteBuf) Seek(i int) (int, error) {
 	if i < 0 || b.i+i > b.Len() {
-		return 0, io.EOF
+		return 0, wrapEOF("Seek")
 	}
 	return b.seek(i), nil
 }
@@ -83,7 +82,7 @@ func (b *ByteBuf) ReadableBytes() int {
 
 func (b *ByteBuf) ReadByte() (byte, error) {
 	if !b.got(szByte) {
-		return 0, io.EOF
+		return 0, wrapEOF("Byte")
 	}
 	c := b.B[b.i]
 	b.seek(szByte)
@@ -92,7 +91,7 @@ func (b *ByteBuf) ReadByte() (byte, error) {
 
 func (b *ByteBuf) ReadBytes(i int) ([]byte, error) {
 	if !b.got(i) {
-		return nil, io.EOF
+		return nil, wrapEOF("Bytes")
 	}
 	c := b.B[b.i : b.i+i]
 	b.seek(i)
@@ -101,7 +100,7 @@ func (b *ByteBuf) ReadBytes(i int) ([]byte, error) {
 
 func (b *ByteBuf) ReadAllBytes() ([]byte, error) {
 	if !b.Readable() {
-		return nil, io.EOF
+		return nil, wrapEOF("AllBytes")
 	}
 	c := b.B[b.i:]
 	b.seek(b.Len())
@@ -115,7 +114,7 @@ func (b *ByteBuf) ReadBool() (bool, error) {
 
 func (b *ByteBuf) ReadShort() (int16, error) {
 	if !b.got(szShort) {
-		return 0, io.EOF
+		return 0, wrapEOF("Short")
 	}
 	c := e.Uint16(b.B[b.i : b.i+szShort])
 	b.seek(szShort)
@@ -124,7 +123,7 @@ func (b *ByteBuf) ReadShort() (int16, error) {
 
 func (b *ByteBuf) ReadInt() (int32, error) {
 	if !b.got(szInt32) {
-		return 0, io.EOF
+		return 0, wrapEOF("Int")
 	}
 	c := e.Uint32(b.B[b.i : b.i+szInt32])
 	b.seek(szInt32)
@@ -133,7 +132,7 @@ func (b *ByteBuf) ReadInt() (int32, error) {
 
 func (b *ByteBuf) ReadLong() (int64, error) {
 	if !b.got(szInt64) {
-		return 0, io.EOF
+		return 0, wrapEOF("Long")
 	}
 	c := e.Uint64(b.B[b.i : b.i+szInt64])
 	b.seek(szInt64)
@@ -142,7 +141,7 @@ func (b *ByteBuf) ReadLong() (int64, error) {
 
 func (b *ByteBuf) ReadFloat() (float32, error) {
 	if !b.got(szFloat32) {
-		return 0, io.EOF
+		return 0, wrapEOF("Float")
 	}
 	c, err := b.ReadInt()
 	return math.Float32frombits(uint32(c)), err
@@ -150,7 +149,7 @@ func (b *ByteBuf) ReadFloat() (float32, error) {
 
 func (b *ByteBuf) ReadDouble() (float64, error) {
 	if !b.got(szDouble) {
-		return 0, io.EOF
+		return 0, wrapEOF("Double")
 	}
 	c, err := b.ReadLong()
 	return math.Float64frombits(uint64(c)), err
@@ -163,20 +162,20 @@ const (
 )
 
 // ReadVarInt reads a variable-length integer from the buffer.
-// If the buffer is too small, io.EOF is returned.
+// If the buffer is too small, EOF is returned.
 // If the VarInt is larger than 5 bytes, ErrInvalidVarInt is returned.
 // If an error occurs, the buffer must be discarded since the integrity can no longer be guaranteed
 // since we don't know how many bytes are left until the next safe read index.
 func (b *ByteBuf) ReadVarInt() (int32, error) {
 	if !b.Readable() {
-		return 0, io.EOF
+		return 0, wrapEOF("VarInt")
 	}
 	var i uint32
 	maxRead := int(math.Min(maxVarInt, float64(b.ReadableBytes())))
 	for j := 0; j < maxRead; j++ {
 		k, err := b.ReadByte()
 		if err != nil {
-			return 0, err
+			return 0, wrap("VarInt", err)
 		}
 		i |= uint32(k&0x7F) << (7 * j)
 		if (k & varTermByte) != 128 {
@@ -187,20 +186,20 @@ func (b *ByteBuf) ReadVarInt() (int32, error) {
 }
 
 // ReadVarLong reads a variable-length long from the buffer.
-// If the buffer is too small, io.EOF is returned.
+// If the buffer is too small, EOF is returned.
 // If the VarLong is larger than 10 bytes, ErrInvalidVarLong is returned.
 // If an error occurs, the buffer must be discarded since the integrity can no longer be guaranteed
 // since we don't know how many bytes are left until the next safe read index.
 func (b *ByteBuf) ReadVarLong() (int64, error) {
 	if !b.Readable() {
-		return 0, io.EOF
+		return 0, wrapEOF("VarLong")
 	}
 	var i uint64
 	maxRead := int(math.Min(maxVarLong, float64(b.ReadableBytes())))
 	for j := 0; j < maxRead; j++ {
 		k, err := b.ReadByte()
 		if err != nil {
-			return 0, err
+			return 0, wrap("VarLong", err)
 		}
 		i |= uint64(k&0x7F) << (7 * j)
 		if (k & varTermByte) != 128 {
@@ -210,20 +209,24 @@ func (b *ByteBuf) ReadVarLong() (int64, error) {
 	return 0, ErrInvalidVarLong
 }
 
-func (b *ByteBuf) ReadString() (string, error) {
+func (b *ByteBuf) ReadString(max int) (string, error) {
 	if !b.Readable() {
-		return "", io.EOF
+		return "", wrapEOF("String")
 	}
-	sz, err := b.ReadVarInt()
+	sz32, err := b.ReadVarInt()
 	if err != nil {
-		return "", err
+		return "", wrap("String", err)
 	}
-	if sz <= 0 { // not sure if <= is correct, but why would you want to read a zero length string?
+	sz := int(sz32)
+	if sz < 0 || sz > max*4 {
 		return "", ErrInvalidStringSize
 	}
-	c, err := b.ReadBytes(int(sz))
+	c, err := b.ReadBytes(sz)
 	if err != nil {
-		return "", err
+		return "", wrap("String", err)
+	}
+	if len(c) > max*4 {
+		return "", ErrInvalidStringSize
 	}
 	return string(c), nil // causes a strcopy, but this is safer
 }

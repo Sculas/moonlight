@@ -19,7 +19,7 @@ type Client struct {
 	Receiver chan []byte
 
 	// logger
-	log *logrus.Entry
+	Log *logrus.Entry
 
 	// client state
 	state state.ClientState
@@ -33,6 +33,6 @@ func NewClient(c gnet.Conn) *Client {
 
 		Receiver: make(chan []byte),
 
-		log: global.ClientLogger.WithField("addr", c.RemoteAddr().String()), // TODO
+		Log: global.ClientLogger.WithField("addr", c.RemoteAddr().String()), // TODO
 	}
 }

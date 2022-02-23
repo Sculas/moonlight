@@ -15,7 +15,7 @@ func Invalid(state ClientState) bool {
 	return state == invalid
 }
 
-func From(state int) ClientState {
+func From(state int32) ClientState {
 	switch state {
 	case -1:
 		return Handshaking

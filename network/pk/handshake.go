@@ -3,6 +3,7 @@ package pk
 import (
 	"github.com/sculas/moonlight/network/pk/direction"
 	"github.com/sculas/moonlight/network/serde"
+	"math"
 )
 
 const IDHandshake = 0x00
@@ -29,7 +30,7 @@ func (h *Handshake) Decode(buf *serde.ByteBuf) (err error) {
 	if err != nil {
 		return
 	}
-	h.ServerAddress, err = buf.ReadString()
+	h.ServerAddress, err = buf.ReadString(math.MaxInt16)
 	if err != nil {
 		return
 	}
