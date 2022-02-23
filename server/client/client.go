@@ -14,7 +14,7 @@ type Client struct {
 	c gnet.Conn
 
 	// buffers
-	rb, wb *serde.ByteBuf
+	rb *serde.ByteBuf
 
 	// frame receiver
 	Receiver chan []byte
@@ -31,7 +31,6 @@ func NewClient(c gnet.Conn) *Client {
 		c: c,
 
 		rb: serde.NewByteBuf(),
-		wb: serde.NewByteBuf(),
 
 		Receiver: make(chan []byte),
 
@@ -59,7 +58,6 @@ func (c *Client) StopReceiving() {
 
 func (c *Client) ResetBuffers() {
 	c.rb.Reset()
-	c.wb.Reset()
 }
 
 func (c *Client) Cleanup() {
