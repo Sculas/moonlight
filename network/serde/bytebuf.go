@@ -140,6 +140,12 @@ const (
 	varTermByte = 0x80
 )
 
+// ReadVarInt reads a variable-length integer from the buffer.
+// If the buffer is too small, io.EOF is returned.
+// If the VarInt is larger than 5 bytes, ErrInvalidVarInt is returned.
+// If the first byte in the VarInt is the terminator byte, ErrInvalidVarInt is returned.
+// If an error occurs, the buffer must be discarded since the integrity can no longer be guaranteed
+// since we don't know how many bytes are left until the next safe read index.
 func (b *ByteBuf) ReadVarInt() (r int, err error) {
 	if !b.Readable() {
 		return 0, io.EOF
@@ -153,15 +159,24 @@ func (b *ByteBuf) ReadVarInt() (r int, err error) {
 		n++
 		r |= (int(c) & maxByte) << n * 7
 		if n > maxVarInt {
-			return 0, ErrVarInt
+			return 0, ErrInvalidVarInt
 		}
 		if c&varTermByte == 0 {
+			if n == 1 { // the first byte should never be the terminator
+				return 0, ErrInvalidVarInt
+			}
 			break
 		}
 	}
 	return
 }
 
+// ReadVarLong reads a variable-length long from the buffer.
+// If the buffer is too small, io.EOF is returned.
+// If the VarLong is larger than 10 bytes, ErrInvalidVarLong is returned.
+// If the first byte in the VarLong is the terminator byte, ErrInvalidVarLong is returned.
+// If an error occurs, the buffer must be discarded since the integrity can no longer be guaranteed
+// since we don't know how many bytes are left until the next safe read index.
 func (b *ByteBuf) ReadVarLong() (r int, err error) {
 	if !b.Readable() {
 		return 0, io.EOF
@@ -175,9 +190,12 @@ func (b *ByteBuf) ReadVarLong() (r int, err error) {
 		n++
 		r |= (int(c) & maxByte) << n * 7
 		if n > maxVarLong {
-			return 0, ErrVarLong
+			return 0, ErrInvalidVarLong
 		}
 		if c&varTermByte == 0 {
+			if n == 1 { // the first byte should never be the terminator
+				return 0, ErrInvalidVarLong
+			}
 			break
 		}
 	}

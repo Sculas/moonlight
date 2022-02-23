@@ -3,7 +3,7 @@ package serde
 import "errors"
 
 var (
-	ErrVarInt            = errors.New("VarInt too big")
-	ErrVarLong           = errors.New("VarLong too big")
+	ErrInvalidVarInt     = errors.New("invalid varint")
+	ErrInvalidVarLong    = errors.New("invalid varlong")
 	ErrInvalidStringSize = errors.New("invalid string size")
 )
