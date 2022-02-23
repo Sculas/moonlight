@@ -45,7 +45,7 @@ func (c *Client) StartReceiving() {
 			break
 		}
 
-		c.log.Debugf("got traffic in our goroutine: %s", string(frame))
+		c.log.Debug("got traffic in our goroutine")
 	}
 
 	c.log.Debug("packet handler goroutine stopped")
