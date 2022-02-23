@@ -2,7 +2,6 @@ package decoder
 
 import (
 	"errors"
-	"fmt"
 	"github.com/sculas/moonlight/network/pk"
 	"github.com/sculas/moonlight/network/pk/direction"
 	"github.com/sculas/moonlight/network/serde"
@@ -25,13 +24,11 @@ func PacketDecoder(buf *serde.ByteBuf) (pk.Packet, error) {
 	if length <= 0 {
 		return nil, ErrInvalidPacketLength
 	}
-	fmt.Printf("buf length: %d\n", buf.Len())
-	fmt.Printf("length: %d\n", length)
-	if buf.Len() < length {
+	if buf.Len() < int(length) {
 		return nil, ErrInvalidPacketLength
 	}
 	packetId, err := buf.ReadVarInt()
-	packet, ok := pk.GetPacket(direction.Serverbound, packetId)
+	packet, ok := pk.GetPacket(direction.Serverbound, int(packetId))
 	if !ok {
 		return nil, ErrUnknownPacket
 	}

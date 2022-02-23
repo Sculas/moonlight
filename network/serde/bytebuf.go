@@ -77,6 +77,10 @@ func (b *ByteBuf) ReadableOffset(i int) bool {
 	return b.Len() > b.i+i
 }
 
+func (b *ByteBuf) ReadableBytes() int {
+	return b.Len() - b.i
+}
+
 func (b *ByteBuf) ReadByte() (byte, error) {
 	if !b.got(szByte) {
 		return 0, io.EOF
@@ -155,70 +159,55 @@ func (b *ByteBuf) ReadDouble() (float64, error) {
 const (
 	maxVarInt   = 5
 	maxVarLong  = 10
-	maxByte     = math.MaxInt8
 	varTermByte = 0x80
 )
 
 // ReadVarInt reads a variable-length integer from the buffer.
 // If the buffer is too small, io.EOF is returned.
 // If the VarInt is larger than 5 bytes, ErrInvalidVarInt is returned.
-// If the first byte in the VarInt is the terminator byte, ErrInvalidVarInt is returned.
 // If an error occurs, the buffer must be discarded since the integrity can no longer be guaranteed
 // since we don't know how many bytes are left until the next safe read index.
-func (b *ByteBuf) ReadVarInt() (r int, err error) {
+func (b *ByteBuf) ReadVarInt() (int32, error) {
 	if !b.Readable() {
 		return 0, io.EOF
 	}
-	c, n := byte(0), 0
-	for {
-		c, err = b.ReadByte()
+	var i uint32
+	maxRead := int(math.Min(maxVarInt, float64(b.ReadableBytes())))
+	for j := 0; j < maxRead; j++ {
+		k, err := b.ReadByte()
 		if err != nil {
 			return 0, err
 		}
-		n++
-		r |= (int(c) & maxByte) << n * 7
-		if n > maxVarInt {
-			return 0, ErrInvalidVarInt
-		}
-		if c&varTermByte == 0 {
-			//if n == 1 { // the first byte should never be the terminator
-			//	return 0, ErrInvalidVarInt
-			//}
-			break
+		i |= uint32(k&0x7F) << (7 * j)
+		if (k & varTermByte) != 128 {
+			return int32(i), nil
 		}
 	}
-	return
+	return 0, ErrInvalidVarInt
 }
 
 // ReadVarLong reads a variable-length long from the buffer.
 // If the buffer is too small, io.EOF is returned.
 // If the VarLong is larger than 10 bytes, ErrInvalidVarLong is returned.
-// If the first byte in the VarLong is the terminator byte, ErrInvalidVarLong is returned.
 // If an error occurs, the buffer must be discarded since the integrity can no longer be guaranteed
 // since we don't know how many bytes are left until the next safe read index.
-func (b *ByteBuf) ReadVarLong() (r int, err error) {
+func (b *ByteBuf) ReadVarLong() (int64, error) {
 	if !b.Readable() {
 		return 0, io.EOF
 	}
-	c, n := byte(0), 0
-	for {
-		c, err = b.ReadByte()
+	var i uint64
+	maxRead := int(math.Min(maxVarLong, float64(b.ReadableBytes())))
+	for j := 0; j < maxRead; j++ {
+		k, err := b.ReadByte()
 		if err != nil {
 			return 0, err
 		}
-		n++
-		r |= (int(c) & maxByte) << n * 7
-		if n > maxVarLong {
-			return 0, ErrInvalidVarLong
-		}
-		if c&varTermByte == 0 {
-			//if n == 1 { // the first byte should never be the terminator
-			//	return 0, ErrInvalidVarLong
-			//}
-			break
+		i |= uint64(k&0x7F) << (7 * j)
+		if (k & varTermByte) != 128 {
+			return int64(i), nil
 		}
 	}
-	return
+	return 0, ErrInvalidVarLong
 }
 
 func (b *ByteBuf) ReadString() (string, error) {

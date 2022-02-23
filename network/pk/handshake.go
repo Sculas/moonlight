@@ -8,10 +8,10 @@ import (
 const IDHandshake = 0x00
 
 type Handshake struct {
-	ProtocolVersion int
+	ProtocolVersion int32
 	ServerAddress   string
 	ServerPort      int16
-	NextState       int
+	NextState       int32
 }
 
 func init() {
