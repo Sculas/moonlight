@@ -34,5 +34,7 @@ func NewClient(c gnet.Conn) *Client {
 		Receiver: make(chan []byte),
 
 		Log: global.ClientLogger.WithField("addr", c.RemoteAddr().String()), // TODO
+
+		state: state.Handshaking,
 	}
 }

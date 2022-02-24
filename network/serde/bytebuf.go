@@ -73,21 +73,25 @@ func (b *ByteBuf) Readable() bool {
 }
 
 func (b *ByteBuf) ReadableOffset(i int) bool {
-	return b.Len() > b.i+i
+	return b.Len() >= b.i+i
 }
 
 func (b *ByteBuf) ReadableBytes() int {
 	return b.Len() - b.i
 }
 
-func (b *ByteBuf) ReadByte() (byte, error) {
+// ReadByte reads a byte from the buffer.
+// It returns a signed byte and an error when the buffer is empty.
+func (b *ByteBuf) ReadByte() (int8, error) {
 	if !b.got(szByte) {
 		return 0, wrapEOF("Byte")
 	}
 	c := b.B[b.i]
 	b.seek(szByte)
-	return c, nil
+	return int8(c), nil
 }
+
+// FIXME: should we convert the 2 functions below to []int8 too?
 
 func (b *ByteBuf) ReadBytes(i int) ([]byte, error) {
 	if !b.got(i) {
@@ -156,9 +160,9 @@ func (b *ByteBuf) ReadDouble() (float64, error) {
 }
 
 const (
-	maxVarInt   = 5
-	maxVarLong  = 10
-	varTermByte = 0x80
+	maxVarInt        = 5
+	maxVarLong       = 10
+	varTermByte int8 = -128 // TIL that in Java, 0x80 byte is actually an underflow byte
 )
 
 // ReadVarInt reads a variable-length integer from the buffer.
@@ -178,7 +182,7 @@ func (b *ByteBuf) ReadVarInt() (int32, error) {
 			return 0, wrap("VarInt", err)
 		}
 		i |= uint32(k&0x7F) << (7 * j)
-		if (k & varTermByte) != 128 {
+		if (k & varTermByte) != varTermByte {
 			return int32(i), nil
 		}
 	}
@@ -202,7 +206,7 @@ func (b *ByteBuf) ReadVarLong() (int64, error) {
 			return 0, wrap("VarLong", err)
 		}
 		i |= uint64(k&0x7F) << (7 * j)
-		if (k & varTermByte) != 128 {
+		if (k & varTermByte) != varTermByte {
 			return int64(i), nil
 		}
 	}

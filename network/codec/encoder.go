@@ -1,4 +1,4 @@
-package decoder
+package codec
 
 import (
 	"github.com/panjf2000/gnet/v2"

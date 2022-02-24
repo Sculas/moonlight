@@ -7,6 +7,7 @@ import (
 	"github.com/sculas/moonlight/config"
 	"github.com/sculas/moonlight/global"
 	"github.com/sculas/moonlight/server"
+	"github.com/sculas/moonlight/server/client/handler"
 	"github.com/sculas/moonlight/util"
 	"github.com/sirupsen/logrus"
 	"log"
@@ -23,6 +24,8 @@ func main() {
 
 	global.ServerLogger = global.Logger.WithField(util.Component("server"))
 	global.ClientLogger = global.Logger.WithField(util.Component("client"))
+
+	handler.InitHandlers() // we must do it from here, otherwise import cycle is going to haunt us.
 
 	server.Server = server.New()
 	log.Fatal(gnet.Run(

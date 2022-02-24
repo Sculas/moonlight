@@ -1,21 +1,22 @@
-package client
+package handler
 
 import (
 	"errors"
 	"fmt"
 	"github.com/sculas/moonlight/network/pk"
+	"github.com/sculas/moonlight/server/client"
 	"github.com/sculas/moonlight/server/client/state"
 	"github.com/sirupsen/logrus"
 )
 
-type Handshake struct{}
+type HandshakingInSetProtocol struct{}
 
 func init() {
-	RegisterHandler(pk.IDHandshake, &Handshake{})
+	client.RegisterHandler(state.Handshaking, pk.IDHandshakingInSetProtocol, &HandshakingInSetProtocol{})
 }
 
-func (h *Handshake) Handle(gp pk.Packet, c *Client) error {
-	p := gp.(*pk.Handshake)
+func (HandshakingInSetProtocol) Handle(gp pk.Packet, c *client.Client) error {
+	p := gp.(*pk.HandshakingInSetProtocol)
 	c.Log.WithFields(logrus.Fields{
 		"version":    p.ProtocolVersion,
 		"address":    p.ServerAddress,
